@@ -793,6 +793,8 @@ class OnPLS(BaseMultiblock, BaseEstimator):
     --------
     >>> import numpy as np
     >>> import OnPLS.estimators as estimators
+    >>> #### use the default PCA
+    >>> from sklearn.decomposition import PCA
     >>> np.random.seed(42)
     >>> n, p_1, p_2, p_3 = 10, 5, 10, 15
     >>> t = np.sort(np.random.randn(n, 1), axis=0)
@@ -810,7 +812,6 @@ class OnPLS(BaseMultiblock, BaseEstimator):
     ...     numReps=1, verbose=1)
     >>> _ = onpls.fit([X1, X2, X3])
     """
-
     def __init__(self, pred_comp, orth_comp, model=None,
                  precomputedW=None, numReps=1, verbose=2,
                  eps=consts.TOLERANCE, max_iter=consts.MAX_ITER):
@@ -881,13 +882,13 @@ class OnPLS(BaseMultiblock, BaseEstimator):
                     self.warn("No more orthogonal components appear to "
                               "exist for matrix %d! Trying anyway!" % (i,))
 
-                pca = PCA(1, eps=self.eps, max_iter=self.max_iter)
+                pca = PCA(n_components=1)
                 pca.fit(Wortho)
-                wortho = pca.P
-                # We can also use Ei here. Doesn't matter.
+                wortho = pca.components_.T
                 tortho = np.dot(Xi, wortho)
                 portho = np.dot(Xi.T, tortho)
                 toto = np.dot(tortho.T, tortho)[0, 0]
+                print("######toto is",toto)
                 # Avoid division by zero by defining 0 / 0 = 0
                 if toto > consts.TOLERANCE:
                     portho = portho / toto
@@ -897,10 +898,10 @@ class OnPLS(BaseMultiblock, BaseEstimator):
                     break
 
                 # It has been discussed whether or not to normalise portho
-                # normpo = np.linalg.norm(portho)
-                # tortho = tortho * normpo
-                # portho = portho / normpo
-
+#                 normpo = np.linalg.norm(portho)
+#                 tortho = tortho * normpo
+#                 portho = portho / normpo
+                print("#########",utils.sumOfSquares(np.dot(tortho, portho.T)) / ssX[i] )
                 if utils.sumOfSquares(
                         np.dot(tortho, portho.T)) / ssX[i] < consts.LIMIT_R2:
                     self.warn("Too small orthogonal component for matrix %d! "
@@ -1004,15 +1005,15 @@ class OnPLS(BaseMultiblock, BaseEstimator):
                         for j in range(i):
                             try:
                                 W[j] = W[j][:, :comp]
-                            except Exception:
+                            except:
                                 pass
                             try:
                                 T[j] = T[j][:, :comp]
-                            except Exception:
+                            except:
                                 pass
                             try:
                                 P[j] = P[j][:, :comp]
-                            except Exception:
+                            except:
                                 pass
 
                         self.warn("Component is not significant! Contribution "
@@ -1223,15 +1224,14 @@ class OnPLS(BaseMultiblock, BaseEstimator):
             W = None
             for j in range(n):
                 if self.pred_comp[i][j] > 0:
-                    pca = PCA(self.pred_comp[i][j],
-                              eps=self.eps, max_iter=self.max_iter)
+                    pca = PCA(n_components=pred_comp[i][j], svd_solver='auto')
                     # TODO: We don't actually need to compute the inner product
                     XjtXi = np.dot(X[j].T, X[i])
                     pca.fit(XjtXi)
                     if W is None:
-                        W = pca.P
+                        W = pca.components_.T
                     else:
-                        W = np.hstack((W, pca.P))
+                        W = np.hstack((W, pca.components_.T))
 
                     computedPredComp[i][j] = W.shape[1]
                 else:
