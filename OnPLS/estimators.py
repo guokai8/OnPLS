@@ -1,3 +1,4 @@
+#### PCA modified with the mean centering######
 # -*- coding: utf-8 -*-
 """
 The :mod:`OnPLS.estimators` module contains all the statistical methods that
